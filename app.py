@@ -3,7 +3,7 @@ import spotipy
 import streamlit as st
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
-
+import streamlit as st
 from mood_detector import detect_mood
 from spotify_client import get_recommendations
 
