@@ -3,18 +3,34 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
 
-# Load credentials from .env file
 load_dotenv()
 
-# Authenticate with Spotify
-auth_manager = SpotifyClientCredentials(
-    client_id=os.getenv("SPOTIPY_CLIENT_ID"),
-    client_secret=os.getenv("SPOTIPY_CLIENT_SECRET")
-)
+def get_spotify_client():
+    """
+    Creates and returns a Spotify client.
+    Reads credentials at call time, not at import time.
+    """
+    try:
+        import streamlit as st
+        client_id = st.secrets.get("SPOTIPY_CLIENT_ID")
+        client_secret = st.secrets.get("SPOTIPY_CLIENT_SECRET")
+    except Exception:
+        client_id = None
+        client_secret = None
 
-sp = spotipy.Spotify(auth_manager=auth_manager)
+    # Fall back to .env if secrets not available
+    if not client_id:
+        client_id = os.getenv("SPOTIPY_CLIENT_ID")
+    if not client_secret:
+        client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
 
-# Genre and keyword mapping based on mood transition
+    auth_manager = SpotifyClientCredentials(
+        client_id=client_id,
+        client_secret=client_secret
+    )
+    return spotipy.Spotify(auth_manager=auth_manager)
+
+
 MOOD_SEARCH_TERMS = {
     "sadness": {
         "calm":     "relaxing ambient peaceful",
@@ -60,6 +76,8 @@ def get_recommendations(detected_emotion, target_mood, limit=8):
     and returns a list of tracks.
     """
     try:
+        sp = get_spotify_client()
+
         emotion = detected_emotion.lower()
         target = target_mood.lower()
 
@@ -67,7 +85,6 @@ def get_recommendations(detected_emotion, target_mood, limit=8):
             emotion = "neutral"
 
         query = MOOD_SEARCH_TERMS[emotion][target]
-
         results = sp.search(q=query, type="track", limit=limit)
 
         tracks = []
