@@ -5,32 +5,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def get_spotify_client():
-    """
-    Creates and returns a Spotify client.
-    Reads credentials at call time, not at import time.
-    """
-    try:
-        import streamlit as st
-        client_id = st.secrets.get("SPOTIPY_CLIENT_ID")
-        client_secret = st.secrets.get("SPOTIPY_CLIENT_SECRET")
-    except Exception:
-        client_id = None
-        client_secret = None
-
-    # Fall back to .env if secrets not available
-    if not client_id:
-        client_id = os.getenv("SPOTIPY_CLIENT_ID")
-    if not client_secret:
-        client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
-
-    auth_manager = SpotifyClientCredentials(
-        client_id=client_id,
-        client_secret=client_secret
-    )
-    return spotipy.Spotify(auth_manager=auth_manager)
-
-
 MOOD_SEARCH_TERMS = {
     "sadness": {
         "calm":     "relaxing ambient peaceful",
@@ -72,11 +46,36 @@ MOOD_SEARCH_TERMS = {
 
 def get_recommendations(detected_emotion, target_mood, limit=8):
     """
-    Searches Spotify for tracks matching the mood transition
-    and returns a list of tracks.
+    Searches Spotify for tracks matching the mood transition.
+    Reads credentials at call time so st.secrets is fully loaded.
     """
     try:
-        sp = get_spotify_client()
+        # Read credentials at call time not import time
+        client_id = None
+        client_secret = None
+
+        # Try st.secrets first
+        try:
+            import streamlit as st
+            client_id = st.secrets["SPOTIPY_CLIENT_ID"]
+            client_secret = st.secrets["SPOTIPY_CLIENT_SECRET"]
+        except Exception:
+            pass
+
+        # Fall back to environment variables
+        if not client_id:
+            client_id = os.getenv("SPOTIPY_CLIENT_ID")
+        if not client_secret:
+            client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
+
+        if not client_id or not client_secret:
+            return {"error": "Spotify credentials not found. Please check your secrets configuration."}
+
+        auth_manager = SpotifyClientCredentials(
+            client_id=client_id,
+            client_secret=client_secret
+        )
+        sp = spotipy.Spotify(auth_manager=auth_manager)
 
         emotion = detected_emotion.lower()
         target = target_mood.lower()
